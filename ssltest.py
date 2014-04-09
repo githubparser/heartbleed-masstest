@@ -107,6 +107,7 @@ def is_vulnerable(target, port):
     try:
         s.connect((target, port))
     except Exception, e:
+        print "No answer on port %s.." % port,
         return None
 
     s.send(hello)
@@ -145,11 +146,12 @@ def main():
             target = line.strip()
             overrideport = False
 
-        print target,
         if overrideport:
-            print ":%s" % overrideport,
-            port = overrideport
-        print ",",
+            port = int(overrideport)
+        else:
+            port = defport
+
+        print "%s:%s," % (target,port),
         sys.stdout.flush();
         result = is_vulnerable(target, port);
         if result is None:
@@ -159,13 +161,13 @@ def main():
             print "Vulnerable!"
             counter_vuln += 1;
         else:
-            print "Probably safe."
+            print "Safe."
             counter_notvuln += 1;
 
     print
     print "No SSL: " + str(counter_nossl)
     print "Vulnerable: " + str(counter_vuln)
-    print "Probably safe: " + str(counter_notvuln)
+    print "Safe: " + str(counter_notvuln)
 
 if __name__ == '__main__':
     main()
