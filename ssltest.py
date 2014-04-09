@@ -15,7 +15,7 @@ import select
 import re
 from optparse import OptionParser
 
-options = OptionParser(usage='%prog file', description='Test for SSL heartbleed vulnerability (CVE-2014-0160) on multiple hosts, takes a file as an argument')
+options = OptionParser(usage='%prog file port', description='Test for SSL heartbleed vulnerability (CVE-2014-0160) on multiple hosts, takes a file as an argument')
 
 def h2bin(x):
     return x.replace(' ', '').replace('\n', '').decode('hex')
@@ -100,12 +100,12 @@ def hit_hb(s):
             hexdump(pay)
             return False
 
-def is_vulnerable(domain):
+def is_vulnerable(target, port):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(3)
 
     try:
-        s.connect((domain, 443))
+        s.connect((target, port))
     except Exception, e:
         return None
 
@@ -127,17 +127,31 @@ def main():
     if len(args) < 1:
         options.print_help()
         return
+    else:
+        inputFile = args[0]
+
+    defport = args[1] if len(args) > 1 else 443
 
     counter_nossl = 0;
     counter_notvuln = 0;
     counter_vuln = 0;
 
-    f = open(args[0], 'r')
+    f = open(inputFile, 'r')
     for line in f:
-        domain = line.strip()
-        print domain + ",",
+        try:
+            target,overrideport = line.split(':')
+            overrideport = overrideport.strip()
+        except ValueError:
+            target = line.strip()
+            overrideport = False
+
+        print target,
+        if overrideport:
+            print ":%s" % overrideport,
+            port = overrideport
+        print ",",
         sys.stdout.flush();
-        result = is_vulnerable(domain);
+        result = is_vulnerable(target, port);
         if result is None:
             print "No SSL."
             counter_nossl += 1;
