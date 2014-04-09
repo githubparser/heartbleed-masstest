@@ -148,9 +148,6 @@ def main():
             print "Probably safe."
             counter_notvuln += 1;
 
-        if int(rank) >= int(args[1]):
-            break
-
     print
     print "No SSL: " + str(counter_nossl)
     print "Vulnerable: " + str(counter_vuln)
