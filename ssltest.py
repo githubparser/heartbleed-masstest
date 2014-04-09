@@ -15,7 +15,7 @@ import select
 import re
 from optparse import OptionParser
 
-options = OptionParser(usage='%prog file port', description='Test for SSL heartbleed vulnerability (CVE-2014-0160) on multiple hosts, takes a file as an argument')
+options = OptionParser(usage='%prog file [port]', description='Test for SSL heartbleed vulnerability (CVE-2014-0160) on multiple hosts, takes a file as an argument')
 
 def h2bin(x):
     return x.replace(' ', '').replace('\n', '').decode('hex')
@@ -149,7 +149,7 @@ def main():
         if overrideport:
             port = int(overrideport)
         else:
-            port = defport
+            port = int(defport)
 
         print "%s:%s," % (target,port),
         sys.stdout.flush();
