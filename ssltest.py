@@ -165,15 +165,15 @@ def is_vulnerable(target, port):
         try:
             s.send(get_hb(version[1]))
             vulnerable = hit_hb(s,get_hb(version[1]))
+            if vulnerable:
+                return vulnerable
+            else:
+               print "pass]",
         except socket.error, e:
             print e[1]+"]",
         finally:
             s.close()
-            
-        if vulnerable:
-            return vulnerable
-        else:
-           print "pass]",
+
     return False
 
 
