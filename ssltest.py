@@ -162,9 +162,14 @@ def is_vulnerable(target, port):
             if typ == 22 and ord(pay[0]) == 0x0E:
                 break
 
-        s.send(get_hb(version[1]))
-        vulnerable = hit_hb(s,get_hb(version[1]))
-        s.close()
+        try:
+            s.send(get_hb(version[1]))
+            vulnerable = hit_hb(s,get_hb(version[1]))
+        except socket.error, e:
+            print e[1]+"]",
+        finally:
+            s.close()
+            
         if vulnerable:
             return vulnerable
         else:
