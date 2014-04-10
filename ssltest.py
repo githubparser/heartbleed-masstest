@@ -15,7 +15,7 @@ import select
 import re
 from optparse import OptionParser
 
-options = OptionParser(usage='%prog [options] file', description='Test for SSL heartbleed vulnerability (CVE-2014-0160) on multiple hosts, takes a file as an argument')
+options = OptionParser(usage='%prog [options] file-or-hostname', description='Test for SSL heartbleed vulnerability (CVE-2014-0160) on multiple hosts, takes a file or hostname as an argument')
 options.add_option('-p', '--port', type='int', default=443, dest='port', help='TCP port to test (default: 443)')
 options.add_option('-v', '--verbose', action="store_true", dest="verbose", help='Be verbose: hexdump server memory')
 
@@ -187,11 +187,17 @@ def main():
         inputFile = args[0]
 
     verbose = opts.verbose
-    counter_nossl = 0;
-    counter_notvuln = 0;
-    counter_vuln = 0;
+    counter_nossl = 0
+    counter_notvuln = 0
+    counter_vuln = 0
+    
+    try:  
+        f = open(inputFile, 'r')
+    except IOError, e:
+        print "Checking host: " + inputFile
+        f = []
+        f.append(inputFile)
 
-    f = open(inputFile, 'r')
     for line in f:
         try:
             target,overrideport = line.split(':')
@@ -206,17 +212,17 @@ def main():
             port = int(opts.port)
 
         print "%s:%s," % (target,port),
-        sys.stdout.flush();
-        result = is_vulnerable(target, port);
+        sys.stdout.flush()
+        result = is_vulnerable(target, port)
         if result is None:
             print "No OpenSSL."
-            counter_nossl += 1;
+            counter_nossl += 1
         elif result:
             print "Vulnerable!]"
-            counter_vuln += 1;
+            counter_vuln += 1
         else:
             print "Safe."
-            counter_notvuln += 1;
+            counter_notvuln += 1
 
     print
     print "No OpenSSL: " + str(counter_nossl)
