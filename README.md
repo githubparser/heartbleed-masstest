@@ -2,6 +2,7 @@ heartbleedchecker
 =================
 
 - Checks SSL 3, TLS 1.0,1.1.,1.2
+- STARTTLS for SMTP, FTP ports
 
 Iterate through an input file that is a list of hostnames or IPs, 
 and output whether or not they are vulnerable in a greppable format.
