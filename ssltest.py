@@ -28,15 +28,6 @@ timeout = 2  # tcp connection timeout
 
 buffy = 4096 # tcp recv buffer
 
-versions = (['SSL 3.0','03 00'],
-            ['TLS 1.0','03 01'],
-            ['TLS 1.1','03 02'],
-            ['TLS 1.2','03 03'])
-
-timeout = 2  # tcp connection timeout
-
-buffy = 4096 # tcp recv buffer
-
 def h2bin(x):
     return x.replace(' ', '').replace('\n', '').decode('hex')
 
@@ -126,7 +117,6 @@ def hit_hb(s,hb):
             return False
 
 def is_vulnerable(target, port):
-<<<<<<< HEAD
 
     for version in versions:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -134,15 +124,6 @@ def is_vulnerable(target, port):
         print "[C:",
         sys.stdout.flush()
 
-=======
-
-    for version in versions:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(timeout)
-        print "[C:",
-        sys.stdout.flush()
-
->>>>>>> 83601eaa503af811041fe0c0d0df0dd8dc3f3de3
         try:
             s.connect((target, port))
             if port == 25: # smtp
